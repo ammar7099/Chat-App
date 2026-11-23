@@ -54,7 +54,6 @@ onAuthStateChanged(auth, async (user) => {
   userAvatar.textContent = getInitial(myName);
 
   try {
-    // Update profile without overwriting other existing profile fields.
     await update(ref(db, `users/${user.uid}`), {
       uid: user.uid,
       name: myName,
@@ -191,6 +190,7 @@ function openConversation(profile) {
   if (profile.uid === loggedInUser.uid) return;
 
   selectedUser = profile;
+
   currentConversationId = getConversationId(
     loggedInUser.uid,
     profile.uid
@@ -231,6 +231,7 @@ function openConversation(profile) {
   renderLoadingMessages();
 
   const conversationId = currentConversationId;
+
   const conversationMessagesRef = ref(
     db,
     `conversations/${conversationId}/messages`
@@ -271,7 +272,10 @@ function openConversation(profile) {
         (a, b) => (a.createdAt || 0) - (b.createdAt || 0)
       );
 
-      messages.forEach(renderMessage);
+      messages.forEach((message) => {
+        renderMessage(message, conversationId);
+      });
+
       chatBox.scrollTop = chatBox.scrollHeight;
     },
     (error) => {
@@ -281,22 +285,19 @@ function openConversation(profile) {
   );
 }
 
-function renderMessage(message) {
+function renderMessage(message, conversationId) {
   const messageDiv = document.createElement("div");
   messageDiv.className = "message";
 
-  if (message.uid === loggedInUser.uid) {
+  const isOwnMessage = message.uid === loggedInUser.uid;
+
+  if (isOwnMessage) {
     messageDiv.classList.add("own");
   }
 
+  // Message text and time stay together in the bubble.
   const content = document.createElement("div");
   content.className = "message-content";
-
-  const name = document.createElement("strong");
-  name.textContent =
-    message.uid === loggedInUser.uid
-      ? "You"
-      : message.name || selectedUser?.name || "User";
 
   const text = document.createElement("span");
   text.className = "message-text";
@@ -306,51 +307,109 @@ function renderMessage(message) {
   time.className = "message-time";
 
   if (message.createdAt) {
-    time.textContent = new Date(message.createdAt).toLocaleTimeString(
-      [],
-      {
-        hour: "2-digit",
-        minute: "2-digit"
-      }
-    );
+    time.textContent = new Date(
+      message.createdAt
+    ).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit"
+    });
   }
 
-  content.append(name, text, time);
+  // Sender name is intentionally not rendered.
+  content.append(text, time);
   messageDiv.appendChild(content);
 
-  if (message.uid === loggedInUser.uid && message.id) {
-    const deleteBtn = document.createElement("button");
+  // Only your own messages have the three-dot menu.
+  if (isOwnMessage && message.id) {
+    const actions = document.createElement("div");
+    actions.className = "message-actions";
 
-    deleteBtn.type = "button";
-    deleteBtn.className = "delete-btn";
-    deleteBtn.textContent = "Delete";
-    deleteBtn.setAttribute("aria-label", "Delete your message");
-    deleteBtn.title = "Delete message";
+    const menuButton = document.createElement("button");
+    menuButton.type = "button";
+    menuButton.className = "message-menu-btn";
+    menuButton.textContent = "⋮";
+    menuButton.setAttribute("aria-label", "Message options");
+    menuButton.setAttribute("aria-expanded", "false");
+    menuButton.title = "Message options";
 
-    deleteBtn.addEventListener("click", async () => {
-      if (!currentConversationId) return;
+    const menu = document.createElement("div");
+    menu.className = "message-menu";
 
-      deleteBtn.disabled = true;
+    const deleteOption = document.createElement("button");
+    deleteOption.type = "button";
+    deleteOption.className = "message-delete-option";
+    deleteOption.textContent = "Delete message";
+
+    menuButton.addEventListener("click", (event) => {
+      event.stopPropagation();
+
+      const willOpen = !menu.classList.contains("open");
+
+      // Close any other open message menu.
+      chatBox.querySelectorAll(".message-menu.open").forEach(
+        (openMenu) => {
+          openMenu.classList.remove("open");
+        }
+      );
+
+      chatBox.querySelectorAll(".message-menu-btn").forEach(
+        (button) => {
+          button.setAttribute("aria-expanded", "false");
+        }
+      );
+
+      if (willOpen) {
+        menu.classList.add("open");
+        menuButton.setAttribute("aria-expanded", "true");
+      }
+    });
+
+    menu.addEventListener("click", (event) => {
+      event.stopPropagation();
+    });
+
+    deleteOption.addEventListener("click", async () => {
+      if (!window.confirm("Delete this message?")) return;
+
+      if (!conversationId || !message.id) return;
+
+      deleteOption.disabled = true;
 
       try {
         const messageRef = ref(
           db,
-          `conversations/${currentConversationId}/messages/${message.id}`
+          `conversations/${conversationId}/messages/${message.id}`
         );
 
         await remove(messageRef);
+
+        menu.classList.remove("open");
+        menuButton.setAttribute("aria-expanded", "false");
       } catch (error) {
         console.error("Delete error:", error);
         showChatError("Delete failed: " + error.message);
-        deleteBtn.disabled = false;
+        deleteOption.disabled = false;
       }
     });
 
-    messageDiv.appendChild(deleteBtn);
+    menu.appendChild(deleteOption);
+    actions.append(menuButton, menu);
+    messageDiv.appendChild(actions);
   }
 
   chatBox.appendChild(messageDiv);
 }
+
+// Close the menu when the user clicks or taps outside it.
+document.addEventListener("click", () => {
+  chatBox.querySelectorAll(".message-menu.open").forEach((menu) => {
+    menu.classList.remove("open");
+  });
+
+  chatBox.querySelectorAll(".message-menu-btn").forEach((button) => {
+    button.setAttribute("aria-expanded", "false");
+  });
+});
 
 function renderWelcome() {
   chatTitle.textContent = "Select a user";
@@ -415,6 +474,7 @@ chatForm.addEventListener("submit", async (event) => {
   }
 
   const messageText = messageInput.value.trim();
+
   if (!messageText) return;
 
   sendBtn.disabled = true;
@@ -422,6 +482,7 @@ chatForm.addEventListener("submit", async (event) => {
 
   try {
     const conversationId = currentConversationId;
+
     const messagesRef = ref(
       db,
       `conversations/${conversationId}/messages`

@@ -13,8 +13,10 @@
   <main class="app-layout">
 
     <aside class="users-panel">
+
       <div class="brand">
         <div class="brand-icon">C</div>
+
         <div>
           <h2>Connect</h2>
           <p>Your chat space</p>
@@ -23,11 +25,16 @@
 
       <div class="my-account">
         <p class="section-label">YOUR ACCOUNT</p>
+
         <div class="account-card">
           <div class="avatar own-avatar" id="user-avatar">U</div>
+
           <div class="user-details">
             <h3 id="sidebar-user">Loading...</h3>
-            <p><span class="status-dot"></span> Logged in</p>
+            <p>
+              <span class="status-dot"></span>
+              Logged in
+            </p>
           </div>
         </div>
       </div>
@@ -45,54 +52,72 @@
         <span class="status-dot"></span>
         Realtime chat connected
       </div>
+
     </aside>
 
     <section class="chat-panel">
 
       <header class="chat-header">
+
         <div class="chat-heading">
           <div id="chat-avatar" class="avatar chat-avatar">?</div>
+
           <div class="header-details">
             <h1 id="chat-title">Select a user</h1>
-            <p id="chat-subtitle">Choose someone from the left panel</p>
+            <p id="chat-subtitle">
+              Choose someone from the left panel
+            </p>
           </div>
         </div>
 
         <button type="button" id="logout-btn" class="logout-btn">
           Logout
         </button>
+
       </header>
 
       <div class="conversation-label">
         <span>CONVERSATION</span>
+
         <span class="live-label">
-          <span class="status-dot"></span> Realtime
+          <span class="status-dot"></span>
+          Realtime
         </span>
       </div>
 
       <div id="chat-box" aria-live="polite">
+
         <div class="welcome-state">
           <div class="welcome-icon">✉</div>
           <h2>Your conversations</h2>
           <p>Select a user from the left to start chatting.</p>
         </div>
+
       </div>
 
       <form id="chat-form">
+
         <div class="message-row">
-          <input type="text" id="message-input" placeholder="Select a user first..." autocomplete="off" maxlength="1000"
-            disabled required>
+
+          <input type="text" id="message-input" placeholder="Message..." autocomplete="off" maxlength="1000" disabled
+            required>
+
           <button type="submit" id="send-btn" disabled>
             Send <span>➤</span>
           </button>
+
         </div>
+
         <p id="chat-error" role="status"></p>
+
       </form>
 
     </section>
+
   </main>
 
   <script type="module" src="./index.js"></script>
+
 </body>
 
 </html>
